@@ -6,27 +6,43 @@ import (
 	"os"
 	"time"
 
+	"github.com/ButterHost69/PKr-server/handler"
+	"github.com/ButterHost69/PKr-server/db"
+
+	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
 
 var (
 	logger  *zap.Logger
-	release bool
-	log_fp  string
+	router 	*gin.Engine
+)
+
+var (
+	// Flag Variables
+	RELEASE bool
+	LOG_FP  string
+	IPADDR	string
 )
 
 func Init() {
-	flag.BoolVar(&release, "r", false, "If Release Mode or Debug Mode. Default: False")
-	flag.StringVar(&log_fp, "l", "./log/all_", "Specify Log File Path Eg: ./log/logs")
+	flag.BoolVar(&RELEASE, "r", false, "If Release Mode or Debug Mode. Default: False")
+	flag.StringVar(&LOG_FP, "l", "./log/events_", "Specify Log File Path Eg: ./log/logs")
+	flag.StringVar(&IPADDR, "ipaddr", "localhost:9069", "Specify Address to Run Server")
 	flag.Parse()
 
-	if release {
+	if err := db.InitSQLiteDatabase(); err != nil {
+		log.Fatal("error Could not start the Database.\nError: ", err)
+	}
+
+	if RELEASE {
+		// Set the Logger
 		current_time := time.Now().Format("2006-01-02_15-04-05")
 
-		log_fp = log_fp + current_time + ".log"
+		LOG_FP = LOG_FP + current_time + ".log"
 
-		file, err := os.OpenFile(log_fp, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+		file, err := os.OpenFile(LOG_FP, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 		if err != nil {
 			log.Fatal("error occured in opening Log file\nerr: ", err)
 
@@ -36,37 +52,61 @@ func Init() {
 		encoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 
 		core := zapcore.NewCore(
-			zapcore.NewJSONEncoder(encoderConfig), // or zapcore.NewConsoleEncoder
+			zapcore.NewJSONEncoder(encoderConfig), 
 			zapcore.AddSync(file),
 			zapcore.InfoLevel,
 		)
 
 		logger = zap.New(core)
+		
+
+		// Set the Gin Server
+		gin.SetMode(gin.ReleaseMode)
+		
+		// TODO: [ ] Allow TLS Support, make it an argument option
+		router = gin.New()
+		router.Use(gin.LoggerWithWriter(zap.NewStdLog(logger).Writer()))
+
 	} else {
+		// Logger
 		encoderConfig := zap.NewProductionEncoderConfig()
-		encoderConfig.TimeKey = "time" // Key for the timestamp
+		encoderConfig.TimeKey = "time" 
 		encoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 
 		core := zapcore.NewCore(
-			zapcore.NewJSONEncoder(encoderConfig), // or zapcore.NewConsoleEncoder
+			zapcore.NewJSONEncoder(encoderConfig), 
 			zapcore.AddSync(os.Stdout),
 			zapcore.InfoLevel,
 		)
 
 		logger = zap.New(core)
+
+		// Gin Router
+		router = gin.Default()
 	}
 
 }
 
 func Close() {
 	logger.Sync()
+	db.CloseSQLiteDatabase()
 }
 
 func main() {
 	Init()
 
 	sugar := logger.Sugar()
-	sugar.Info("~ PKr Server Started ~")
+	sugar.Info("~ PKr Server Started ~")	
+
+	router.GET("/", func(ctx *gin.Context) {
+		ctx.String(200, "Hello World ... ")
+	})
+
+	router.POST("/register/user", handler.Register_User)
+
+	if err := router.Run(IPADDR); err != nil {
+		log.Fatal("error Occured in Starting Gin Server...Error: ", err)
+	}
 
 	Close()
 }
