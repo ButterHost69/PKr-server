@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	db 	*sql.DB
+	db *sql.DB
 )
 
 func createAllTables() error {
@@ -24,14 +24,30 @@ func createAllTables() error {
 		password TEXT
 	);`
 
+	workspaceTableQuery := `CREATE TABLE IF NOT EXISTS workspaces (
+		username TEXT,
+		workspace_name TEXT,
+
+		PRIMARY KEY(username, workspace_name)
+	);`
+
 	_, err = tx.Exec(usersTableQuery)
 	if err != nil {
 		tx.Rollback()
 		return err
 	}
 
-	if err = tx.Commit(); err!=nil {
+	_, err = tx.Exec(workspaceTableQuery)
+	if err != nil {
+		tx.Rollback()
 		return err
+	}
+
+	if err = tx.Commit(); err != nil {
+		if rollback_err := tx.Rollback(); rollback_err != nil {
+			return fmt.Errorf("could Not RollBack transaction during a commit error.\nError: %v", rollback_err)
+		}
+		return fmt.Errorf("could not Commit transaction.\nError: %v", err)
 	}
 
 	return nil
@@ -47,7 +63,7 @@ func InitSQLiteDatabase() error {
 
 	err = createAllTables()
 	if err != nil {
-		return fmt.Errorf("error: Could Create Tables.\nError: %v", err)
+		return fmt.Errorf("error: Could Not Create Tables.\nError: %v", err)
 	}
 	return nil
 }
@@ -58,10 +74,60 @@ func CreateNewUser(username, password string) error {
 	if err != nil {
 		return fmt.Errorf("error: Could Create New User %s .\nError: %v", username, err)
 	}
-	
+
 	return nil
 }
 
-func CloseSQLiteDatabase(){
+// Returns Bool, if bool=false and err=nil, username or password incorrect
+func RegisterNewWorkspace(username, password, workspace_name string) (bool, error) {
+	tx, err := db.Begin()
+	if err != nil {
+		return false, err
+	}
+
+	ifAuth, err := authUser(tx, username, password)
+	if err != nil {
+		return false, fmt.Errorf("error Could not Auth User.\nError: %v", err)
+	}
+
+	if !ifAuth {
+		return false, nil
+	}
+
+	query := "INSERT INTO workspaces (username, workspace_name) VALUES (?,?)"
+	if _, err = tx.Exec(query, username, workspace_name); err != nil {
+		tx.Rollback()
+		return false, fmt.Errorf("error Could not Execute Insert Statement for Register Workspace.\nError: %v", err)
+	}
+
+	if err = tx.Commit(); err != nil {
+		if rollback_err := tx.Rollback(); rollback_err != nil {
+			return false, fmt.Errorf("could Not RollBack transaction during a commit error.\nError: %v", rollback_err)
+		}
+		return false, fmt.Errorf("could not Commit transaction.\nError: %v", err)
+	}
+
+	return true, nil
+}
+
+func authUser(tx *sql.Tx, username, password string) (bool, error) {
+	query := "SELECT COUNT(*) FROM users WHERE username=? AND password=?"
+	rows, err := tx.Query(query, username, password)
+	if err != nil {
+		tx.Rollback()
+		return false, err
+	}
+	defer rows.Close()
+	
+	// Check if any rows retrieved
+	if !rows.Next() {
+		return false, nil
+	}
+
+	return true, nil
+
+}
+
+func CloseSQLiteDatabase() {
 	db.Close()
 }

@@ -6,8 +6,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/ButterHost69/PKr-server/handler"
 	"github.com/ButterHost69/PKr-server/db"
+	"github.com/ButterHost69/PKr-server/handler"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -15,15 +15,15 @@ import (
 )
 
 var (
-	logger  *zap.Logger
-	router 	*gin.Engine
+	logger *zap.Logger
+	router *gin.Engine
 )
 
 var (
 	// Flag Variables
 	RELEASE bool
 	LOG_FP  string
-	IPADDR	string
+	IPADDR  string
 )
 
 func Init() {
@@ -52,17 +52,16 @@ func Init() {
 		encoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 
 		core := zapcore.NewCore(
-			zapcore.NewJSONEncoder(encoderConfig), 
+			zapcore.NewJSONEncoder(encoderConfig),
 			zapcore.AddSync(file),
 			zapcore.InfoLevel,
 		)
 
 		logger = zap.New(core)
-		
 
 		// Set the Gin Server
 		gin.SetMode(gin.ReleaseMode)
-		
+
 		// TODO: [ ] Allow TLS Support, make it an argument option
 		router = gin.New()
 		router.Use(gin.LoggerWithWriter(zap.NewStdLog(logger).Writer()))
@@ -70,11 +69,11 @@ func Init() {
 	} else {
 		// Logger
 		encoderConfig := zap.NewProductionEncoderConfig()
-		encoderConfig.TimeKey = "time" 
+		encoderConfig.TimeKey = "time"
 		encoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 
 		core := zapcore.NewCore(
-			zapcore.NewJSONEncoder(encoderConfig), 
+			zapcore.NewJSONEncoder(encoderConfig),
 			zapcore.AddSync(os.Stdout),
 			zapcore.InfoLevel,
 		)
@@ -96,13 +95,19 @@ func main() {
 	Init()
 
 	sugar := logger.Sugar()
-	sugar.Info("~ PKr Server Started ~")	
+	sugar.Info("~ PKr Server Started ~")
 
 	router.GET("/", func(ctx *gin.Context) {
 		ctx.String(200, "Hello World ... ")
 	})
 
-	router.POST("/register/user", handler.Register_User)
+	router.POST("/register/user", func(ctx *gin.Context) {
+		handler.RegisterUser(ctx, sugar)
+	})
+
+	router.POST("/register/workspace", func(ctx *gin.Context) {
+		handler.RegisterWorkspace(ctx, sugar)
+	})
 
 	if err := router.Run(IPADDR); err != nil {
 		log.Fatal("error Occured in Starting Gin Server...Error: ", err)
