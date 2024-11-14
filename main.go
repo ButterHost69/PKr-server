@@ -109,6 +109,11 @@ func main() {
 		handler.RegisterWorkspace(ctx, sugar)
 	})
 
+	// TODO: [ ] Send 
+	router.POST("/update/me", func(ctx *gin.Context) {
+		handler.UserIPCheck(ctx, sugar)
+	})
+
 	if err := router.Run(IPADDR); err != nil {
 		log.Fatal("error Occured in Starting Gin Server...Error: ", err)
 	}

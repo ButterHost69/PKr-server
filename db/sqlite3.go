@@ -31,6 +31,12 @@ func createAllTables() error {
 		PRIMARY KEY(username, workspace_name)
 	);`
 
+	currentUserIPTableQuery := `CREATE TABLE IF NOT EXISTS currentuserip (
+		username TEXT PRIMARY KEY,
+		ip_addr TEXT,
+		port TEXT
+	);`
+
 	_, err = tx.Exec(usersTableQuery)
 	if err != nil {
 		tx.Rollback()
@@ -38,6 +44,12 @@ func createAllTables() error {
 	}
 
 	_, err = tx.Exec(workspaceTableQuery)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	_, err = tx.Exec(currentUserIPTableQuery)
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -125,7 +137,45 @@ func authUser(tx *sql.Tx, username, password string) (bool, error) {
 	}
 
 	return true, nil
+}
 
+
+func UpdateUserIP(username, password, ip_addr, port string) error {
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+
+	ifAuth, err := authUser(tx, username, password)
+	if err != nil {
+		return fmt.Errorf("error Could not Auth User.\nError: %v", err)
+	}
+
+	if !ifAuth {
+		return fmt.Errorf("error Incorrect user credentials.\nError: %v", err)
+	}
+
+	// query := `UPDATE TABLE currentuserip 
+	// SET ip_addr=?, port=?
+	// WHERE username=?`
+
+	query := `INSERT OR REPLACE INTO currentuserip (username, ip_addr, port) 
+	VALUES (?,?,?);`
+
+	_, err = tx.Exec(query, username, ip_addr, port)
+	if err != nil {
+		tx.Rollback()
+		return fmt.Errorf("error Could not Update Users IP.\nError: %v", err)
+	}
+
+	if err = tx.Commit(); err != nil {
+		if rollback_err := tx.Rollback(); rollback_err != nil {
+			return fmt.Errorf("could Not RollBack transaction during a commit error.\nError: %v", rollback_err)
+		}
+		return fmt.Errorf("could not Commit transaction.\nError: %v", err)
+	}
+	
+	return nil
 }
 
 func CloseSQLiteDatabase() {

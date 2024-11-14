@@ -3,12 +3,20 @@ package handler
 import (
 	"math/rand"
 	"strconv"
+	"strings"
 
 	"go.uber.org/zap"
 
 	"github.com/ButterHost69/PKr-server/db"
 	"github.com/gin-gonic/gin"
 )
+
+func getIpAddress(ctx *gin.Context) (string, string){
+	remoteAddr := ctx.Request.RemoteAddr
+	address := strings.Split(remoteAddr, ":")
+
+	return address[0], address[1]
+}
 
 func RegisterUser(ctx *gin.Context, sugar *zap.SugaredLogger) {
 	username := ctx.PostForm("username")
@@ -25,6 +33,14 @@ func RegisterUser(ctx *gin.Context, sugar *zap.SugaredLogger) {
 		return
 	}
 
+	ip_addr, port := getIpAddress(ctx)
+	if err := db.UpdateUserIP(username, password, ip_addr, port); err != nil {
+		ctx.JSON(203, gin.H{
+			"response": "could not update user ip",
+		})	
+		return
+	}
+		
 	ctx.JSON(200, gin.H{
 		"response": "success",
 		"username": username,
@@ -63,4 +79,37 @@ func RegisterWorkspace(ctx *gin.Context, sugar *zap.SugaredLogger) {
 	ctx.JSON(201, gin.H{
 		"response": "authentication error",
 	})	
+}
+
+
+// TODO: [ ] Make so that user has to prove username password only once do something like session token...
+func UserIPCheck(ctx *gin.Context, sugar *zap.SugaredLogger) {
+	username := ctx.PostForm("username")
+	password := ctx.PostForm("password")
+	port := ctx.PostForm("port")
+	
+	var ipaddr string
+	if username == ""{
+		ctx.JSON(203, gin.H{
+			"response": "incorrect parameters",
+		})	
+		return
+	}
+
+	if port == "" {
+		ipaddr, port = getIpAddress(ctx)
+	} else {
+		ipaddr, _ = getIpAddress(ctx)
+	}
+
+	if err := db.UpdateUserIP(username, password, ipaddr, port); err != nil {
+		ctx.JSON(203, gin.H{
+			"response": "could not update user ip",
+		})	
+		return
+	}
+
+	ctx.JSON(200, gin.H{
+		"response": "success",
+	})
 }
