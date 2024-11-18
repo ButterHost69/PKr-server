@@ -47,7 +47,8 @@ func RegisterUser(ctx *gin.Context, sugar *zap.SugaredLogger) {
 	})
 }
 
-// TODO: [ ] Check if user already has a workspace of that name already. Return with another type of response if so eg. Workspace Exists
+// TODO: [X] Check if user already has a workspace of that name already. Return with another type of response if so eg. Workspace Exists
+// TODO: [ ] Check if the above todo works, no time for today :)
 func RegisterWorkspace(ctx *gin.Context, sugar *zap.SugaredLogger) {
 	username := ctx.PostForm("username")
 	password := ctx.PostForm("password")
@@ -58,6 +59,24 @@ func RegisterWorkspace(ctx *gin.Context, sugar *zap.SugaredLogger) {
 		ctx.JSON(203, gin.H{
 			"response": "incorrect parameters",
 		})	
+	}
+
+	workspaceList, err := db.GetWorkspaceList(username)
+	if err != nil {
+		sugar.Error(err)
+		ctx.JSON(500, gin.H{
+			"response": "internal server error",
+		})	
+		return
+	}
+
+	for _, val := range workspaceList {
+		if val == workspace_name {
+			ctx.JSON(200, gin.H{
+				"response": "workspace already exist",
+			})	
+			return
+		}
 	}
 
 	ok, err := db.RegisterNewWorkspace(username, password, workspace_name)

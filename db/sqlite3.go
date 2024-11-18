@@ -178,6 +178,43 @@ func UpdateUserIP(username, password, ip_addr, port string) error {
 	return nil
 }
 
+func GetWorkspaceList (username string) ([]string, error) {
+	var workspaces []string
+
+    // Define the SQL query to select workspace names for the specific user
+    query := "SELECT workspace_name FROM workspaces WHERE username = ?"
+
+    // Execute the query and get the rows
+    rows, err := db.Query(query, username)
+    if err != nil {
+        return nil, fmt.Errorf("failed to query workspaces: %v", err)
+    }
+    defer rows.Close()
+
+    // Loop through the rows and append each workspace name to the result slice
+    for rows.Next() {
+        var workspaceName string
+        if err := rows.Scan(&workspaceName); err != nil {
+            return nil, fmt.Errorf("failed to scan workspace name: %v", err)
+        }
+        workspaces = append(workspaces, workspaceName)
+    }
+
+    // Check for any row iteration errors
+    if err := rows.Err(); err != nil {
+        return nil, fmt.Errorf("row iteration error: %v", err)
+    }
+
+    // If no workspaces found for the user, return an error
+    if len(workspaces) == 0 {
+        return nil, fmt.Errorf("no workspaces found for user ID %s", username)
+    }
+
+    // Return the list of workspace names
+    return workspaces, nil
+}
+
+
 func CloseSQLiteDatabase() {
 	db.Close()
 }
