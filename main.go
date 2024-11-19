@@ -109,6 +109,10 @@ func main() {
 		handler.RegisterWorkspace(ctx, sugar)
 	})
 
+	router.POST("/register/user_to_workspace", func(ctx *gin.Context) {
+		handler.RegisterUserToWorkspace(ctx, sugar)
+	})
+
 	// TODO: [ ] Send 
 	router.POST("/update/me", func(ctx *gin.Context) {
 		handler.UserIPCheck(ctx, sugar)
