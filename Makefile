@@ -3,3 +3,6 @@ release:
 
 debug:
 	go run .
+
+testserver:
+	go run . -t

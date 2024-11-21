@@ -22,20 +22,22 @@ var (
 var (
 	// Flag Variables
 	RELEASE bool
+	TESTMODE bool
 	LOG_FP  string
 	IPADDR  string
 )
 
 func Init() {
 	flag.BoolVar(&RELEASE, "r", false, "If Release Mode or Debug Mode. Default: False")
+	flag.BoolVar(&TESTMODE, "t", false, "If Test Mode. Default: False")
 	flag.StringVar(&LOG_FP, "l", "./log/events_", "Specify Log File Path Eg: ./log/logs")
 	flag.StringVar(&IPADDR, "ipaddr", "localhost:9069", "Specify Address to Run Server")
 	flag.Parse()
 
-	if err := db.InitSQLiteDatabase(); err != nil {
+	if _, err := db.InitSQLiteDatabase(TESTMODE); err != nil {
 		log.Fatal("error Could not start the Database.\nError: ", err)
 	}
-
+	
 	if RELEASE {
 		// Set the Logger
 		current_time := time.Now().Format("2006-01-02_15-04-05")
@@ -66,8 +68,7 @@ func Init() {
 		router = gin.New()
 		router.Use(gin.LoggerWithWriter(zap.NewStdLog(logger).Writer()))
 
-	} else {
-		// Logger
+	} else {		
 		encoderConfig := zap.NewProductionEncoderConfig()
 		encoderConfig.TimeKey = "time"
 		encoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
@@ -86,38 +87,19 @@ func Init() {
 
 }
 
+
 func Close() {
 	logger.Sync()
 	db.CloseSQLiteDatabase()
 }
 
+// TODO: [ ] Write Tests for the API's
 func main() {
 	Init()
-
 	sugar := logger.Sugar()
+
+	handler.SetupRouter(router, sugar.Desugar())
 	sugar.Info("~ PKr Server Started ~")
-
-	router.GET("/", func(ctx *gin.Context) {
-		ctx.String(200, "Hello World ... ")
-	})
-
-	router.POST("/register/user", func(ctx *gin.Context) {
-		handler.RegisterUser(ctx, sugar)
-	})
-
-	router.POST("/register/workspace", func(ctx *gin.Context) {
-		handler.RegisterWorkspace(ctx, sugar)
-	})
-
-	router.POST("/register/user_to_workspace", func(ctx *gin.Context) {
-		handler.RegisterUserToWorkspace(ctx, sugar)
-	})
-
-	// TODO: [ ] Send 
-	router.POST("/update/me", func(ctx *gin.Context) {
-		handler.UserIPCheck(ctx, sugar)
-	})
-
 	if err := router.Run(IPADDR); err != nil {
 		log.Fatal("error Occured in Starting Gin Server...Error: ", err)
 	}
