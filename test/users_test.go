@@ -3,6 +3,7 @@ package test
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -14,8 +15,14 @@ import (
 
 
 func TestMain(m *testing.M){
-	db.InitSQLiteDatabase(true)
+	var err error
+	_, err = db.InitSQLiteDatabase(true, "../test_database.db")
+	if err != nil {
+		fmt.Printf("error occured in initiating database.\nError: %e\n", err)
+		os.Exit(1)
+	}
 
+	fmt.Println("database initiated...")
 	code := m.Run()
 	os.Exit(code)
 }

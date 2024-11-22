@@ -33,8 +33,14 @@ func Init() {
 	flag.StringVar(&LOG_FP, "l", "./log/events_", "Specify Log File Path Eg: ./log/logs")
 	flag.StringVar(&IPADDR, "ipaddr", "localhost:9069", "Specify Address to Run Server")
 	flag.Parse()
-
-	if _, err := db.InitSQLiteDatabase(TESTMODE); err != nil {
+	
+	var database_path string
+	if TESTMODE {
+		database_path = "./test_database"
+	} else {
+		database_path = "./server_database.db"
+	}
+	if _, err := db.InitSQLiteDatabase(TESTMODE, database_path); err != nil {
 		log.Fatal("error Could not start the Database.\nError: ", err)
 	}
 	

@@ -83,14 +83,12 @@ func createAllTables() error {
 // If inMemory : 
 // 				 True -> Returns the db pointer
 // 				 False -> Doesn't return shit
-func InitSQLiteDatabase(TESTMODE bool) (*sql.DB, error) {
+func InitSQLiteDatabase(TESTMODE bool, database_path string) (*sql.DB, error) {
 	var err error
-	if TESTMODE {
-		db, err = sql.Open("sqlite3", "./test_database.db")
-	} else {
-		db, err = sql.Open("sqlite3", "./server_database.db")
-	}
-	
+	// db, err = sql.Open("sqlite3", "./server_database.db")
+	// db, err = sql.Open("sqlite3", "./test_database.db")
+	db, err = sql.Open("sqlite3", database_path)
+		
 	if err != nil {
 		return nil, fmt.Errorf("error: Could Not Start The Database.\nError: %v", err)
 	}
@@ -294,7 +292,8 @@ func RegisterUserToWorkspace(username, password, workspace_name, connection_user
 }
 
 func VerifyUserExistsInUsersTable(username string) (bool, error) {
-	query := "SELECT username FROM users WHERE username=?"
+	// query := "SELECT username FROM users"
+	query := `SELECT username FROM users WHERE username=?`
 
 	rows, err := db.Query(query, username)
 	if err != nil {
@@ -302,13 +301,13 @@ func VerifyUserExistsInUsersTable(username string) (bool, error) {
 	}
 	defer rows.Close()
 
-	var dbUsername string	
-	for rows.Next() {
-		if err := rows.Scan(&dbUsername); err != nil {
-			return false, fmt.Errorf("failed to scan workspace name: %v", err)
-		}
+	
+	if rows.Next() {
+		return true, nil
 	}
-	return username == dbUsername, nil
+
+	return false, nil
+
 }
 
 func CloseSQLiteDatabase() {
