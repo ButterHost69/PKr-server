@@ -59,9 +59,10 @@ func RegisterWorkspace(ctx *gin.Context, sugar *zap.SugaredLogger) {
 		ctx.JSON(203, gin.H{
 			"response": "incorrect parameters",
 		})
+		return
 	}
 
-	workspaceList, err := db.GetWorkspaceList(username)
+	ifExists, err := db.CheckIfWorkspaceExists(username, workspace_name)
 	if err != nil {
 		sugar.Error(err)
 		ctx.JSON(500, gin.H{
@@ -70,13 +71,11 @@ func RegisterWorkspace(ctx *gin.Context, sugar *zap.SugaredLogger) {
 		return
 	}
 
-	for _, val := range workspaceList {
-		if val == workspace_name {
-			ctx.JSON(200, gin.H{
-				"response": "workspace already exist",
-			})
-			return
-		}
+	if ifExists {
+		ctx.JSON(200, gin.H{
+			"response": "workspace already exist",
+		})
+		return
 	}
 
 	ok, err := db.RegisterNewWorkspace(username, password, workspace_name)

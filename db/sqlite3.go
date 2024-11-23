@@ -115,6 +115,23 @@ func CreateNewUser(username, password string) error {
 	return nil
 }
 
+func CheckIfWorkspaceExists(username, workspace_name string) (bool, error) {
+	query := `SELECT * FROM workspaces WHERE username=? AND workspace_name=?`
+
+	rows, err := db.Query(query, username, workspace_name)
+	if err != nil {
+		return false, fmt.Errorf("failed to query users: %v", err)
+	}
+	defer rows.Close()
+
+	
+	if rows.Next() {
+		return true, nil
+	}
+
+	return false, nil
+}
+
 // Returns Bool, if bool=false and err=nil, username or password incorrect
 func RegisterNewWorkspace(username, password, workspace_name string) (bool, error) {
 	tx, err := db.Begin()

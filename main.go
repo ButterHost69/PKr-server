@@ -36,7 +36,7 @@ func Init() {
 	
 	var database_path string
 	if TESTMODE {
-		database_path = "./test_database"
+		database_path = "./test_database.db"
 	} else {
 		database_path = "./server_database.db"
 	}
