@@ -38,9 +38,10 @@ type GenericResp struct {
 
 // Main struct to store details for all throughout tests
 type UserDetails struct {
-	Username		string	`json:"username"`
-	Password		string	`json:"password"`
-	Workspace_Name	string	`json:"workspace_name"`
+	Username			string	`json:"username"`
+	Password			string	`json:"password"`
+	Workspace_Name		string	`json:"workspace_name"`
+	Connection_Username	string	`json:"connection_username"`
 }
 
 var (
@@ -124,13 +125,6 @@ func TestRegisterNewUser(t *testing.T) {
 	userDetails.Password = user.Password
 }	
 
-
-// TODO: [ ] TEST ~ RegisterUserToWorkspace
-// /register/user_to_workspace
-func TestRegisterUserToWorkspace(t *testing.T){
-	
-}
-
 // TODO: [ ] Write a Failing Test, for auth 
 // /register/workspace
 func TestRegisterWorkspace(t *testing.T){
@@ -205,3 +199,89 @@ func TestRegisterWorkspace(t *testing.T){
 	t.Logf("User Entry present in Database")
 	userDetails.Workspace_Name = workspace_name
 }
+
+// TODO: [ ] TEST ~ RegisterUserToWorkspace
+// /register/user_to_workspace
+func TestRegisterUserToWorkspace(t *testing.T){ 
+	connection_username := "userWorkspace#123"
+
+	url := "http://localhost:9069/register/user_to_workspace"
+  	method := "POST"
+
+	// username := ctx.PostForm("username")
+	// password := ctx.PostForm("password")
+	// workspace_name := ctx.PostForm("workspace_name")
+	// connection_username := ctx.PostForm("connection_username")
+
+  	payload := &bytes.Buffer{}
+  	writer := multipart.NewWriter(payload)
+  	err := writer.WriteField("username", userDetails.Username)
+  	if err != nil {
+		t.Fatalf("Error writing field: %v", err)
+  	}
+
+  	err = writer.WriteField("password", userDetails.Password)
+  	if err != nil {
+		t.Fatalf("Error writing field: %v", err)
+  	}
+
+	err = writer.WriteField("workspace_name", userDetails.Workspace_Name)
+  	if err != nil {
+		t.Fatalf("Error writing field: %v", err)
+  	}
+	 
+	err = writer.WriteField("connection_username", connection_username)
+  	if err != nil {
+		t.Fatalf("Error writing field: %v", err)
+  	}
+
+  	err = writer.Close()
+  	if err != nil {
+  	  t.Fatalf("Error in closing writer: %v", err)
+  	  return
+  	}
+
+  	client := &http.Client {
+  	}
+  	req, err := http.NewRequest(method, url, payload)
+  	if err != nil {
+  	  t.Fatalf("Error failed to create request: %v", err)
+  	}
+  	req.Header.Set("Content-Type", writer.FormDataContentType())
+  	
+	resp, err := client.Do(req)
+  	if err != nil {
+  	  t.Fatalf("Error failed to make send request: %v", err)
+  	}
+  	defer resp.Body.Close()
+
+  	body, err := io.ReadAll(resp.Body)
+  	if err != nil {
+  	  t.Fatalf("Error failed to read from the response: %v", err)
+  	}
+
+  	t.Logf("Response status: %v", resp.Status)
+	t.Logf("Response body: %s", body)
+
+	var repsonse GenericResp
+	err = json.Unmarshal(body, &repsonse)
+	if err != nil {
+  	  t.Fatalf("Error failed to umarshall repsonse: %v", err)
+  	}
+	if resp.Status != "200 OK" && repsonse.Response == "success"{
+		t.Fatalf("Error Expected Status: 200 OK  ||  Body: 'response':'success,\nreceived: Status: %s, Body: %s", resp.Status, string(body))
+	}
+
+	ifExists, err := db.VerifyConnectionUserExistsInWorkspaceConnectionTable(userDetails.Workspace_Name, userDetails.Username, connection_username)
+	if err != nil {
+		t.Fatalf("Error failed to verify if connection username attached to workspace in db: %v", err)
+	}
+
+	if !ifExists {
+		t.Fatalf("User Connection to Workspace not present in Database")
+	}
+
+	t.Logf("User Connection to Workspace is present in Database")
+	userDetails.Connection_Username = connection_username
+}
+

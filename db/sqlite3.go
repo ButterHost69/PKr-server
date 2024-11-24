@@ -285,10 +285,11 @@ func RegisterUserToWorkspace(username, password, workspace_name, connection_user
 		}
 	}
 
+	// TODO: [ ] Check if connection_username exists in users table
 	return 2, fmt.Errorf("error, workspace doesn't exist")
 	workspace_exists:
 	{
-		query := `INSERT INTO workspaceconnection (workspace_name, owner_username, workspace_username) 
+		query := `INSERT INTO workspaceconnection (workspace_name, owner_username, connection_username) 
 		VALUES (?,?,?);`
 
 		_, err = tx.Exec(query, workspace_name, username, connection_username)
@@ -313,6 +314,26 @@ func VerifyUserExistsInUsersTable(username string) (bool, error) {
 	query := `SELECT username FROM users WHERE username=?`
 
 	rows, err := db.Query(query, username)
+	if err != nil {
+		return false, fmt.Errorf("failed to query users: %v", err)
+	}
+	defer rows.Close()
+
+	
+	if rows.Next() {
+		return true, nil
+	}
+
+	return false, nil
+
+}
+
+func VerifyConnectionUserExistsInWorkspaceConnectionTable(workspace_name, owner_username, connection_username string) (bool, error) {
+	// query := "SELECT username FROM users"
+	// query := `SELECT username FROM users WHERE username=?`
+	query := `SELECT * FROM workspaceconnection WHERE workspace_name=? AND owner_username=? AND connection_username=?;`
+
+	rows, err := db.Query(query, workspace_name, owner_username, connection_username)
 	if err != nil {
 		return false, fmt.Errorf("failed to query users: %v", err)
 	}
