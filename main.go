@@ -99,7 +99,7 @@ func Close() {
 	db.CloseSQLiteDatabase()
 }
 
-// TODO: [ ] Write Tests for the API's
+
 func main() {
 	Init()
 	sugar := logger.Sugar()

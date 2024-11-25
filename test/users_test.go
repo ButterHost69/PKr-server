@@ -200,7 +200,7 @@ func TestRegisterWorkspace(t *testing.T){
 	userDetails.Workspace_Name = workspace_name
 }
 
-// TODO: [ ] TEST ~ RegisterUserToWorkspace
+// TODO: [X] TEST ~ RegisterUserToWorkspace
 // /register/user_to_workspace
 func TestRegisterUserToWorkspace(t *testing.T){ 
 	connection_username := "userWorkspace#123"

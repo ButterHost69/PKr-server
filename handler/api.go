@@ -29,4 +29,11 @@ func SetupRouter(router *gin.Engine, logger *zap.Logger) {
 	router.POST("/update/me", func(ctx *gin.Context) {
 		UserIPCheck(ctx, sugar)
 	})
+
+	// Returns all workspace owner's IP - (In Future allow all the IPs of people that have latest workspace)
+	// TODO: [ ] Test this code :)
+	// TODO: [ ] A way to load dummy data for test in test db
+	router.GET("/whats/new", func(ctx *gin.Context) {
+		GetAllMyConnectedWorkspaceInfo(ctx, sugar)
+	})
 }

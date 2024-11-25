@@ -348,6 +348,132 @@ func VerifyConnectionUserExistsInWorkspaceConnectionTable(workspace_name, owner_
 
 }
 
+func GetUserIP(username string) (string, error) {
+	query := `SELECT ip_addr, port FROM currentuserip WHERE username=?;`
+
+	rows, err := db.Query(query, username)
+	if err != nil {
+		return "", fmt.Errorf("failed to query users: %v", err)
+	}
+	defer rows.Close()
+
+	ip := ""
+	port := ""
+	for rows.Next() {
+		if err := rows.Scan(&ip); err != nil {
+			return "", fmt.Errorf("failed to scan workspace name: %v", err)
+		}
+		
+		if err := rows.Scan(&port); err != nil {
+			return "", fmt.Errorf("failed to scan owner username: %v", err)
+		}
+	}
+
+	if ip == "" || port == "" {
+		return "", fmt.Errorf("no workspaces found for user ID %s", username)
+	}
+	return ip+":"+port, nil
+}
+
+func GetAllMyConnectedWorkspaceInfo(username, password string) (UsersConnectionInfo, error) {
+	var usersConnectionInfo UsersConnectionInfo
+	// usersTableQuery := `CREATE TABLE IF NOT EXISTS users (
+	// 	username TEXT PRIMARY KEY,
+	// 	password TEXT
+	// );`
+
+	// workspaceTableQuery := `CREATE TABLE IF NOT EXISTS workspaces (
+	// 	username TEXT,
+	// 	workspace_name TEXT,
+
+	// 	PRIMARY KEY(username, workspace_name)
+	// );`
+
+	// currentUserIPTableQuery := `CREATE TABLE IF NOT EXISTS currentuserip (
+	// 	username TEXT PRIMARY KEY,
+	// 	ip_addr TEXT,
+	// 	port TEXT
+	// );`
+
+	// workspaceConnectionsQuery := `CREATE TABLE IF NOT EXISTS workspaceconnection(
+	// 	workspace_name	TEXT,
+	// 	owner_username TEXT,
+	// 	connection_username TEXT,
+
+	// 	PRIMARY KEY(workspace_name, owner_username)
+	// );`
+	
+	// [X] Auth User
+	// [X] Check all users in workspaceconnection where connection_username == username
+	// [X] Retrieve IPs of owner_username in IPs Table
+
+	// TODO: [ ] Check Auth without tx
+	tx, err := db.Begin()
+	if err != nil {
+		return usersConnectionInfo, err
+	}
+	
+	ifAuth, err := authUser(tx, username, password)
+	if err != nil {
+		return usersConnectionInfo, fmt.Errorf("error Could not Auth User.\nError: %v", err)
+	}
+
+	if !ifAuth {
+		return usersConnectionInfo, fmt.Errorf("error Incorrect user credentials.\nError: %v", err)
+	}
+	
+	if err = tx.Commit(); err != nil {
+		if rollback_err := tx.Rollback(); rollback_err != nil {
+			return usersConnectionInfo, fmt.Errorf("could Not RollBack transaction during a commit error.\nError: %v", rollback_err)
+		}
+		return usersConnectionInfo, fmt.Errorf("could not Commit transaction.\nError: %v", err)
+	}
+	
+	query := "SELECT workspace_name, owner_username FROM workspaceconnection WHERE connection_username = ?"
+	rows, err := db.Query(query, username)
+	if err != nil {
+		return usersConnectionInfo, fmt.Errorf("failed to query in workspaceconnection: %v", err)
+	}
+	defer rows.Close()
+
+	
+	for rows.Next() {
+		// 	workspace_name	TEXT,
+		// 	owner_username TEXT,
+		var workspaceName 	string
+		var ownerUsername	string
+		if err := rows.Scan(&workspaceName); err != nil {
+			return usersConnectionInfo, fmt.Errorf("failed to scan workspace name: %v", err)
+		}
+		
+		if err := rows.Scan(&ownerUsername); err != nil {
+			return usersConnectionInfo, fmt.Errorf("failed to scan owner username: %v", err)
+		}
+
+		ip, err := GetUserIP(ownerUsername)
+		if err != nil {
+			return usersConnectionInfo, fmt.Errorf("failed to retrieve workspace owner ip: %v", err)
+		}
+
+		usersConnectionInfo.Connected_Workspace_List = append(usersConnectionInfo.Connected_Workspace_List, ConnectedWorkspaceInfo{
+			Workspace_Name: workspaceName,
+			Workspace_Ip: ip,
+		})
+	}
+
+	// Check for any row iteration errors
+	if err := rows.Err(); err != nil {
+		return usersConnectionInfo, fmt.Errorf("row iteration error: %v", err)
+	}
+
+	// If no workspaces found for the user, return an error
+	if len(usersConnectionInfo.Connected_Workspace_List) == 0 {
+		return usersConnectionInfo, fmt.Errorf("no workspaces found for user ID %s", username)
+	}
+
+	return usersConnectionInfo, nil
+}
+
 func CloseSQLiteDatabase() {
 	db.Close()
 }

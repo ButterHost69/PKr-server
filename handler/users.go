@@ -173,3 +173,28 @@ func UserIPCheck(ctx *gin.Context, sugar *zap.SugaredLogger) {
 		"response": "success",
 	})
 }
+
+func GetAllMyConnectedWorkspaceInfo(ctx *gin.Context, sugar *zap.SugaredLogger) {
+	username := ctx.PostForm("username")
+	password := ctx.PostForm("password")
+	
+	if username == "" && password == "" {
+		ctx.JSON(203, gin.H{
+			"response": "incorrect parameters",
+		})
+		return
+	}
+
+	usersConnectionInfo, err := db.GetAllMyConnectedWorkspaceInfo(username, password)
+	if err != nil {
+		ctx.JSON(203, gin.H{
+			"response": "could not update user ip",
+		})
+		return
+	}
+
+	ctx.JSON(200, gin.H{
+		"response": "success",
+		"user_connection_info":usersConnectionInfo,
+	})
+}
