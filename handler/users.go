@@ -48,7 +48,7 @@ func RegisterUser(ctx *gin.Context, sugar *zap.SugaredLogger) {
 }
 
 // TODO: [X] Check if user already has a workspace of that name already. Return with another type of response if so eg. Workspace Exists
-// TODO: [ ] Check if the above todo works, no time for today :)
+// TODO: [X] Check if the above todo works, no time for today :)
 func RegisterWorkspace(ctx *gin.Context, sugar *zap.SugaredLogger) {
 	username := ctx.PostForm("username")
 	password := ctx.PostForm("password")
@@ -99,7 +99,7 @@ func RegisterWorkspace(ctx *gin.Context, sugar *zap.SugaredLogger) {
 	})
 }
 
-// TODO : [ ] Check if the Below code Works, havent tested it :)
+// TODO : [X] Check if the Below code Works, havent tested it :)
 // TODO : [ ] Check if the IP of the Requester matches in the LastUserIP Database
 func RegisterUserToWorkspace(ctx *gin.Context, sugar *zap.SugaredLogger) {
 	username := ctx.PostForm("username")
@@ -130,6 +130,12 @@ func RegisterUserToWorkspace(ctx *gin.Context, sugar *zap.SugaredLogger) {
 	case 2:
 		ctx.JSON(201, gin.H{
 			"response": "workspace doesn't exist",
+		})
+		return
+
+	case 3:
+		ctx.JSON(201, gin.H{
+			"response": "connection user doesnt exists",
 		})
 		return
 	case 5:

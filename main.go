@@ -99,7 +99,7 @@ func Close() {
 	db.CloseSQLiteDatabase()
 }
 
-
+// TODO: [ ] Find a way to load test data in test database
 func main() {
 	Init()
 	sugar := logger.Sugar()

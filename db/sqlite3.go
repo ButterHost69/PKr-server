@@ -258,6 +258,7 @@ func GetWorkspaceList(username string) ([]string, error) {
 // Returns : 0 -> All Good
 //	1 -> Authentication Error
 //	2 -> Workspace Doesn't Exists
+// 3 -> connection user doesnt exists
 //	5 -> server error
 func RegisterUserToWorkspace(username, password, workspace_name, connection_username string) (int, error) {
 	tx, err := db.Begin()
@@ -285,10 +286,20 @@ func RegisterUserToWorkspace(username, password, workspace_name, connection_user
 		}
 	}
 
-	// TODO: [ ] Check if connection_username exists in users table
+	// TODO: [X] Check if connection_username exists in users table
 	return 2, fmt.Errorf("error, workspace doesn't exist")
 	workspace_exists:
 	{
+		ifExist, err := VerifyUserExistsInUsersTable(connection_username)
+		if err != nil {
+			tx.Rollback()
+			return 5, fmt.Errorf("error in Verifying if connection exists.\nError: %v", err)
+		}
+
+		if !ifExist {
+			return 3, nil
+		}
+
 		query := `INSERT INTO workspaceconnection (workspace_name, owner_username, connection_username) 
 		VALUES (?,?,?);`
 
