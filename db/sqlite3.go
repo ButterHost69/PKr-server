@@ -40,9 +40,7 @@ func createAllTables() error {
 	workspaceConnectionsQuery := `CREATE TABLE IF NOT EXISTS workspaceconnection(
 		workspace_name	TEXT,
 		owner_username TEXT,
-		connection_username TEXT,
-
-		PRIMARY KEY(workspace_name, owner_username)
+		connection_username TEXT
 	);`
 
 	_, err = tx.Exec(usersTableQuery)
@@ -78,6 +76,71 @@ func createAllTables() error {
 
 	return nil
 
+}
+
+func InsertDummyData() error{
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	
+	query := `INSERT INTO users (username, password) VALUES
+				('user#123', 'password123'),
+				('user#456', 'password456'),
+				('user#789', 'password789'),
+				('user#101', 'password101'),
+				('user#102', 'password102');`
+	if _, err = tx.Exec(query); err != nil {
+		tx.Rollback()
+		return fmt.Errorf("error Could not Execute Insert Statement for users dummy data.\nError: %v", err)
+	}
+
+	query = `INSERT INTO workspaces (username, workspace_name) VALUES
+				('user#123', 'WorkspaceA'),
+				('user#123', 'WorkspaceB'),
+				('user#456', 'WorkspaceC'),
+				('user#789', 'WorkspaceD'),
+				('user#101', 'WorkspaceE'),
+				('user#102', 'WorkspaceF');`
+	if _, err = tx.Exec(query); err != nil {
+		tx.Rollback()
+		return fmt.Errorf("error Could not Execute Insert Statement for workspace dummy data.\nError: %v", err)
+	}
+
+	query = `INSERT INTO currentuserip (username, ip_addr, port) VALUES
+				('user#123', '192.168.1.1', '8080'),
+				('user#456', '192.168.1.2', '8081'),
+				('user#789', '192.168.1.3', '8082'),
+				('user#101', '192.168.1.4', '8083'),
+				('user#102', '192.168.1.5', '8084');`
+	if _, err = tx.Exec(query); err != nil {
+		tx.Rollback()
+		return fmt.Errorf("error Could not Execute Insert Statement for currentuserip dummy data.\nError: %v", err)
+	}
+
+
+	query = `INSERT INTO workspaceconnection (workspace_name, owner_username, connection_username) VALUES
+				('WorkspaceA', 'user#123', 'user#456'),
+				('WorkspaceA', 'user#123', 'user#789'),
+				('WorkspaceB', 'user#123', 'user#101'),
+				('WorkspaceC', 'user#456', 'user#102'),
+				('WorkspaceD', 'user#789', 'user#101'),
+				('WorkspaceE', 'user#101', 'user#123');`
+	if _, err = tx.Exec(query); err != nil {
+		tx.Rollback()
+		return fmt.Errorf("error Could not Execute Insert Statement for workspaceconnection dummy data.\nError: %v", err)
+	}
+
+
+
+	if err = tx.Commit(); err != nil {
+		if rollback_err := tx.Rollback(); rollback_err != nil {
+			return fmt.Errorf("could Not RollBack transaction during a commit error.\nError: %v", rollback_err)
+		}
+		return fmt.Errorf("could not Commit transaction.\nError: %v", err)
+	}
+
+	return nil
 }
 
 // If inMemory : 

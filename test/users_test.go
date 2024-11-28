@@ -13,6 +13,10 @@ import (
 	"github.com/ButterHost69/PKr-server/db"
 )
 
+var (
+	userDetails		UserDetails
+	dummyDetails	UserDetails
+)
 
 func TestMain(m *testing.M){
 	var err error
@@ -21,8 +25,18 @@ func TestMain(m *testing.M){
 		fmt.Printf("error occured in initiating database.\nError: %e\n", err)
 		os.Exit(1)
 	}
-
+	err = db.InsertDummyData()
+		if err != nil {
+			fmt.Printf("error: Could Not Create Tables.\nError: %v", err)
+			os.Exit(1)
+		}	
 	fmt.Println("database initiated...")
+
+	dummyDetails.Username = "user#123"
+	dummyDetails.Password = "password123"
+	dummyDetails.Workspace_Name = "WorkspaceA"
+	dummyDetails.Connection_Username = "user#456"
+	
 	code := m.Run()
 	os.Exit(code)
 }
@@ -43,10 +57,6 @@ type UserDetails struct {
 	Workspace_Name		string	`json:"workspace_name"`
 	Connection_Username	string	`json:"connection_username"`
 }
-
-var (
-	userDetails	UserDetails
-)
 
 // FIXME: [X] Test Failing eventhough username Entry is present in the database. The error is in db.VerifyUsernameInUsersTable
 // Test for POST /register/user
@@ -285,3 +295,61 @@ func TestRegisterUserToWorkspace(t *testing.T){
 	userDetails.Connection_Username = connection_username
 }
 
+// FIXME: [ ] Not Working 
+// /whats/new
+func TestGetAllMyConnectedWorkspaceInfo(t *testing.T){
+	// connection_username := "userWorkspace#123"
+
+	url := "http://localhost:9069/whats/new"
+  	method := "GET"
+
+	// username := ctx.PostForm("username")
+	// password := ctx.PostForm("password")
+
+  	payload := &bytes.Buffer{}
+  	writer := multipart.NewWriter(payload)
+  	err := writer.WriteField("username", dummyDetails.Username)
+  	if err != nil {
+		t.Fatalf("Error writing field: %v", err)
+  	}
+
+  	err = writer.WriteField("password", dummyDetails.Password)
+  	if err != nil {
+		t.Fatalf("Error writing field: %v", err)
+  	}
+
+  	err = writer.Close()
+  	if err != nil {
+  	  t.Fatalf("Error in closing writer: %v", err)
+  	  return
+  	}
+
+  	client := &http.Client {
+  	}
+  	req, err := http.NewRequest(method, url, payload)
+  	if err != nil {
+  	  t.Fatalf("Error failed to create request: %v", err)
+  	}
+  	req.Header.Set("Content-Type", writer.FormDataContentType())
+  	
+	resp, err := client.Do(req)
+  	if err != nil {
+  	  t.Fatalf("Error failed to make send request: %v", err)
+  	}
+  	defer resp.Body.Close()
+
+  	body, err := io.ReadAll(resp.Body)
+  	if err != nil {
+  	  t.Fatalf("Error failed to read from the response: %v", err)
+  	}
+
+  	t.Logf("Response status: %v", resp.Status)
+	t.Logf("Response body: %s", body)
+
+}
+
+func TestClose(t *testing.T){
+	t.Cleanup(func() {
+		db.CloseSQLiteDatabase()
+	})
+}
